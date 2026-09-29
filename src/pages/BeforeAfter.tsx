@@ -1,126 +1,102 @@
-import { useEffect, useRef } from 'react';
+import React, { useEffect } from 'react';
 import { motion, useMotionValue, useSpring, useTransform } from 'framer-motion';
-import { useApp } from '../context/AppContext';
 
 function AnimatedNumber({ from, to, suffix = '' }: { from: number; to: number; suffix?: string }) {
   const count = useMotionValue(from);
-  const spring = useSpring(count, { stiffness: 60, damping: 25 });
+  const spring = useSpring(count, { stiffness: 50, damping: 20 });
   const rounded = useTransform(spring, v => Math.round(v).toLocaleString() + suffix);
 
   useEffect(() => {
-    const t = setTimeout(() => count.set(to), 300);
+    const t = setTimeout(() => count.set(to), 400);
     return () => clearTimeout(t);
   }, [to, count]);
 
   return <motion.span>{rounded}</motion.span>;
 }
 
-const BEFORE = [
-  { icon: '🔗', label: 'Portals', val: 4, suffix: '' },
-  { icon: '🔐', label: 'Logins Required', val: 4, suffix: '' },
-  { icon: '📄', label: 'Document Uploads', val: 9, suffix: '' },
-  { icon: '⏱', label: 'Average Wait', val: 45, suffix: ' days' },
-  { icon: '📊', label: 'Visibility', val: 0, suffix: '%' },
-  { icon: '🔄', label: 'Dept Coordination', val: 0, suffix: '%' },
+const BEFORE_KPIS = [
+  { icon: '🔗', label: 'Portals', val: 4, from: 0 },
+  { icon: '📝', label: 'Forms Filled', val: 4, from: 0 },
+  { icon: '📄', label: 'Document Uploads', val: 11, from: 0 },
+  { icon: '🏢', label: 'Office Visits', val: 3, from: 0 },
+  { icon: '⏱', label: 'Average Wait', val: 23, from: 0, suffix: ' days' },
+  { icon: '🚫', label: 'Visibility', val: 0, from: 0, suffix: '%' },
 ];
 
-const AFTER = [
-  { icon: '🎫', label: 'Case Passport', val: 1, suffix: '' },
-  { icon: '🔓', label: 'Logins Required', val: 1, suffix: '' },
-  { icon: '📤', label: 'Document Uploads', val: 0, suffix: '' },
-  { icon: '🚀', label: 'Average Wait', val: 10, suffix: ' days' },
-  { icon: '📡', label: 'Visibility', val: 100, suffix: '%' },
-  { icon: '⚡', label: 'Dept Coordination', val: 100, suffix: '%' },
+const AFTER_KPIS = [
+  { icon: '🎫', label: 'Case Passport', val: 1, from: 4 },
+  { icon: '📝', label: 'Forms Filled', val: 1, from: 4 },
+  { icon: '📤', label: 'Re-uploads', val: 0, from: 11 },
+  { icon: '🏠', label: 'Office Visits', val: 0, from: 3 },
+  { icon: '🚀', label: 'Average Wait', val: 6, from: 23, suffix: ' days' },
+  { icon: '📡', label: 'Visibility', val: 100, from: 0, suffix: '%' },
 ];
 
 export default function BeforeAfter() {
-  const { state } = useApp();
-  const lang = state.language;
-  const t = (en: string, mr: string) => lang === 'en' ? en : mr;
-
   return (
     <div className="h-full bg-slate-50 flex flex-col overflow-hidden">
       {/* Header */}
-      <div className="text-center py-8 shrink-0">
+      <div className="text-center py-6 shrink-0 z-10">
         <motion.div initial={{ opacity: 0, y: -20 }} animate={{ opacity: 1, y: 0 }}>
-          <h1 className="text-4xl font-black text-navy-900 mb-2">
-            {t('The SUTRADHAR Impact', 'SUTRADHAR चा प्रभाव')}
+          <h1 className="text-4xl font-black text-navy-900 mb-2 tracking-tight">
+            The SUTRADHAR Impact
           </h1>
-          <p className="text-slate-500 text-lg">
-            {t('Before vs. With SUTRADHAR — Government Digital Platform Interoperability', 'पूर्वी विरुद्ध SUTRADHAR सह')}
+          <p className="text-slate-500 text-lg font-medium">
+            Transforming the citizen experience through interoperability
           </p>
         </motion.div>
       </div>
 
       {/* Split Screen */}
-      <div className="flex-1 grid grid-cols-2 gap-0 mx-8 mb-8 rounded-2xl overflow-hidden shadow-2xl border border-slate-100">
+      <div className="flex-1 grid grid-cols-2 gap-0 mx-8 mb-6 rounded-2xl overflow-hidden shadow-2xl border border-slate-200 relative">
         {/* Before – Left */}
         <motion.div
           initial={{ opacity: 0, x: -40 }}
           animate={{ opacity: 1, x: 0 }}
           transition={{ delay: 0.2, duration: 0.6 }}
-          className="bg-slate-800 p-8 flex flex-col"
+          className="bg-white p-8 flex flex-col border-r border-slate-100 relative overflow-hidden"
         >
-          <div className="text-center mb-8">
-            <div className="inline-flex items-center gap-2 bg-red-900/30 border border-red-700/40 rounded-full px-4 py-1.5 mb-3">
+          {/* Background pattern */}
+          <div className="absolute inset-0 opacity-[0.03] bg-[radial-gradient(#000_1px,transparent_1px)] [background-size:16px_16px]" />
+          
+          <div className="text-center mb-8 relative z-10">
+            <div className="inline-flex items-center gap-2 bg-red-50 border border-red-100 text-red-600 rounded-full px-4 py-1.5 mb-3 shadow-sm">
               <span className="w-2 h-2 rounded-full bg-red-500" />
-              <span className="text-red-400 text-sm font-bold">{t('Today — Without SUTRADHAR', 'आज — SUTRADHAR शिवाय')}</span>
+              <span className="text-xs font-bold uppercase tracking-widest">Today</span>
             </div>
-            <h2 className="text-white text-2xl font-black">😓 {t('4 Portals, 4 Logins', '4 पोर्टल, 4 लॉगिन')}</h2>
-            <p className="text-slate-400 text-sm mt-1">{t('Rohan must visit every department separately', 'रोहनला प्रत्येक विभागात वेगळे जावे लागते')}</p>
+            <h2 className="text-slate-800 text-3xl font-black tracking-tight">Siloed & Repetitive</h2>
+            <p className="text-slate-500 text-sm mt-2">Citizens navigate the bureaucracy, not the service.</p>
           </div>
 
-          {/* Journey diagram - before */}
-          <div className="flex-1 flex flex-col gap-3">
-            {[
-              { dept: 'Revenue Portal', action: 'Login #1 · Upload income proof · Upload land record · Wait 15 days', color: 'bg-red-900/30 border-red-700/30' },
-              { dept: 'Social Justice Portal', action: 'Login #2 · Re-upload Aadhaar · Upload caste cert · Wait 10 days', color: 'bg-red-900/30 border-red-700/30' },
-              { dept: 'Higher Education Portal', action: 'Login #3 · Re-upload all docs · Re-enter details · Wait 12 days', color: 'bg-red-900/30 border-red-700/30' },
-              { dept: 'DBT Portal', action: 'Login #4 · Re-verify bank details · Manual processing · Wait 8 days', color: 'bg-red-900/30 border-red-700/30' },
-            ].map((step, i) => (
-              <motion.div
-                key={step.dept}
-                initial={{ opacity: 0, x: -20 }}
-                animate={{ opacity: 1, x: 0 }}
-                transition={{ delay: 0.4 + i * 0.1 }}
-                className={`border rounded-xl p-3 ${step.color}`}
-              >
-                <div className="flex items-center gap-2 mb-1">
-                  <span className="w-5 h-5 rounded-full bg-red-700 flex items-center justify-center text-red-200 text-[10px] font-bold shrink-0">{i + 1}</span>
-                  <span className="text-red-300 font-bold text-xs">{step.dept}</span>
-                </div>
-                <p className="text-slate-400 text-xs pl-7 leading-relaxed">{step.action}</p>
-              </motion.div>
-            ))}
-
+          <div className="flex-1 flex flex-col justify-center">
             {/* Before KPIs */}
-            <div className="grid grid-cols-3 gap-3 mt-auto pt-4">
-              {BEFORE.map((b, i) => (
+            <div className="grid grid-cols-2 gap-4">
+              {BEFORE_KPIS.map((b, i) => (
                 <motion.div
                   key={b.label}
                   initial={{ opacity: 0, scale: 0.8 }}
                   animate={{ opacity: 1, scale: 1 }}
-                  transition={{ delay: 0.8 + i * 0.08 }}
-                  className="bg-slate-700 rounded-xl p-3 text-center"
+                  transition={{ delay: 0.5 + i * 0.1 }}
+                  className="bg-slate-50 border border-slate-100 rounded-2xl p-5 text-center shadow-sm"
                 >
-                  <div className="text-2xl">{b.icon}</div>
-                  <div className="text-2xl font-black text-red-400 mt-1">
-                    <AnimatedNumber from={0} to={b.val} suffix={b.suffix} />
+                  <div className="text-3xl mb-2">{b.icon}</div>
+                  <div className="text-4xl font-black text-slate-800 tracking-tighter">
+                    <AnimatedNumber from={b.from} to={b.val} suffix={b.suffix} />
                   </div>
-                  <div className="text-slate-400 text-[10px] mt-0.5 leading-tight">{b.label}</div>
+                  <div className="text-slate-500 text-xs font-bold uppercase tracking-wide mt-2">{b.label}</div>
                 </motion.div>
               ))}
             </div>
           </div>
         </motion.div>
 
-        {/* Divider */}
+        {/* Divider badge */}
         <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 z-20">
           <motion.div
-            initial={{ scale: 0, opacity: 0 }}
-            animate={{ scale: 1, opacity: 1 }}
-            transition={{ delay: 0.6, type: 'spring', stiffness: 200 }}
-            className="w-14 h-14 rounded-full bg-saffron-500 shadow-xl flex items-center justify-center text-white font-black text-xs border-4 border-white"
+            initial={{ scale: 0, opacity: 0, rotate: -180 }}
+            animate={{ scale: 1, opacity: 1, rotate: 0 }}
+            transition={{ delay: 1, type: 'spring', stiffness: 200, damping: 20 }}
+            className="w-16 h-16 rounded-full bg-navy-600 shadow-2xl flex items-center justify-center text-white font-black text-sm border-[6px] border-white"
           >
             VS
           </motion.div>
@@ -131,69 +107,37 @@ export default function BeforeAfter() {
           initial={{ opacity: 0, x: 40 }}
           animate={{ opacity: 1, x: 0 }}
           transition={{ delay: 0.3, duration: 0.6 }}
-          className="bg-gradient-to-br from-navy-800 to-navy-700 p-8 flex flex-col"
+          className="bg-gradient-to-br from-navy-900 to-navy-800 p-8 flex flex-col relative overflow-hidden"
         >
-          <div className="text-center mb-8">
-            <div className="inline-flex items-center gap-2 bg-verified-500/20 border border-verified-400/40 rounded-full px-4 py-1.5 mb-3">
-              <span className="w-2 h-2 rounded-full bg-verified-400 animate-pulse" />
-              <span className="text-verified-300 text-sm font-bold">{t('With SUTRADHAR', 'SUTRADHAR सह')}</span>
+          {/* Background decoration */}
+          <div className="absolute top-0 right-0 -mt-20 -mr-20 w-64 h-64 bg-verified-500/20 rounded-full blur-3xl" />
+          <div className="absolute bottom-0 left-0 -mb-20 -ml-20 w-64 h-64 bg-saffron-500/20 rounded-full blur-3xl" />
+
+          <div className="text-center mb-8 relative z-10">
+            <div className="inline-flex items-center gap-2 bg-verified-500/20 border border-verified-400/30 text-verified-300 rounded-full px-4 py-1.5 mb-3 shadow-inner">
+              <span className="w-2 h-2 rounded-full bg-verified-400 animate-pulse shadow-[0_0_8px_rgba(74,222,128,0.8)]" />
+              <span className="text-xs font-bold uppercase tracking-widest">With SUTRADHAR</span>
             </div>
-            <h2 className="text-white text-2xl font-black">🚀 {t('One Case Passport', 'एक केस पासपोर्ट')}</h2>
-            <p className="text-navy-300 text-sm mt-1">{t('Rohan applies once, SUTRADHAR does the rest', 'रोहन एकदाच अर्ज करतो, SUTRADHAR बाकी करते')}</p>
+            <h2 className="text-white text-3xl font-black tracking-tight">Unified & Invisible</h2>
+            <p className="text-navy-200 text-sm mt-2">Data travels so the citizen doesn't have to.</p>
           </div>
 
-          <div className="flex-1 flex flex-col gap-3">
-            {/* Single journey */}
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.5 }}
-              className="bg-saffron-500/20 border border-saffron-400/30 rounded-xl p-4 text-center"
-            >
-              <div className="text-3xl mb-2">🎫</div>
-              <div className="text-xl font-black text-saffron-300 mb-1">SUT-2026-004821</div>
-              <p className="text-navy-300 text-sm">{t('One application. One Case ID. Zero re-uploads.', 'एक अर्ज. एक केस ID. पुन: अपलोड नाही.')}</p>
-            </motion.div>
-
-            {/* Auto-flow */}
-            <div className="flex-1 bg-navy-900/30 rounded-xl p-4">
-              <p className="text-navy-300 text-xs font-bold mb-3">⚡ {t('SUTRADHAR auto-flows:', 'SUTRADHAR स्वयंचलित प्रवाह:')}</p>
-              {[
-                { step: '1', text: t('Fetches income & land from Revenue (SOAP, retried safely)', 'महसूलकडून उत्पन्न मिळवते (SOAP, सुरक्षित retry)'), done: true },
-                { step: '2', text: t('Fetches caste category from Social Justice (REST)', 'सामाजिक न्यायाकडून जात मिळवते'), done: true },
-                { step: '3', text: t('Smart Refers to Higher Ed with pre-verified facts', 'उच्च शिक्षणास स्मार्ट रेफरल'), done: true },
-                { step: '4', text: t('DBT transfer: ₹25,000 to Rohan\'s bank account', 'DBT: ₹25,000 बँकेत जमा'), done: false },
-              ].map((s, i) => (
-                <motion.div
-                  key={i}
-                  initial={{ opacity: 0, x: 10 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  transition={{ delay: 0.6 + i * 0.12 }}
-                  className="flex items-center gap-3 mb-2 last:mb-0"
-                >
-                  <div className={`w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-bold shrink-0 ${s.done ? 'bg-verified-500 text-white' : 'bg-saffron-500 text-white'}`}>
-                    {s.done ? '✓' : s.step}
-                  </div>
-                  <p className="text-navy-200 text-xs">{s.text}</p>
-                </motion.div>
-              ))}
-            </div>
-
+          <div className="flex-1 flex flex-col justify-center relative z-10">
             {/* After KPIs */}
-            <div className="grid grid-cols-3 gap-3">
-              {AFTER.map((a, i) => (
+            <div className="grid grid-cols-2 gap-4">
+              {AFTER_KPIS.map((a, i) => (
                 <motion.div
                   key={a.label}
                   initial={{ opacity: 0, scale: 0.8 }}
                   animate={{ opacity: 1, scale: 1 }}
-                  transition={{ delay: 0.9 + i * 0.08 }}
-                  className="bg-navy-900/40 rounded-xl p-3 text-center border border-verified-500/20"
+                  transition={{ delay: 1.2 + i * 0.1 }}
+                  className="bg-navy-800/50 backdrop-blur-sm border border-navy-700/50 rounded-2xl p-5 text-center shadow-lg"
                 >
-                  <div className="text-2xl">{a.icon}</div>
-                  <div className="text-2xl font-black text-verified-400 mt-1">
-                    <AnimatedNumber from={0} to={a.val} suffix={a.suffix} />
+                  <div className="text-3xl mb-2">{a.icon}</div>
+                  <div className="text-4xl font-black text-white tracking-tighter drop-shadow-md">
+                    <AnimatedNumber from={a.from} to={a.val} suffix={a.suffix} />
                   </div>
-                  <div className="text-navy-300 text-[10px] mt-0.5 leading-tight">{a.label}</div>
+                  <div className="text-navy-300 text-xs font-bold uppercase tracking-wide mt-2">{a.label}</div>
                 </motion.div>
               ))}
             </div>
@@ -205,13 +149,15 @@ export default function BeforeAfter() {
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 1.2 }}
+        transition={{ delay: 2 }}
         className="text-center pb-6 shrink-0"
       >
-        <p className="text-2xl font-black text-navy-900">
-          {t('"One Case. Every Department."', '"एक केस. प्रत्येक विभाग."')}
+        <p className="text-[10px] text-slate-400 uppercase tracking-widest mb-3 font-semibold">
+          * Metrics are illustrative based on simulated data flow
         </p>
-        <p className="text-slate-500 mt-1">SUTRADHAR · PS SIH26129 · Team Last Commit · Smart India Hackathon 2026</p>
+        <h3 className="text-3xl font-black text-navy-900 tracking-tight">
+          One case. <span className="text-saffron-500">One journey.</span> Every department.
+        </h3>
       </motion.div>
     </div>
   );

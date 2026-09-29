@@ -4,7 +4,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { clsx } from 'clsx';
 import { useApp } from '../context/AppContext';
 import { CITIZEN, CASE_ID, VERIFIED_FACTS, CONSENT_ITEMS } from '../data/mockData';
-import { Button, Card, Badge, Progress, VerifiedTick, Modal } from '../components/ui';
+import { Button, Card, Badge, VerifiedTick, Modal } from '../components/ui';
 import { submitApplication } from '../hooks/useSimApi';
 
 const STEP_LABELS = [
@@ -385,7 +385,7 @@ export default function ApplyOnce() {
       </div>
 
       {/* Consent Modal */}
-      <Modal open={consentOpen} onClose={() => setConsentOpen(false)} title="Citizen Consent – Detailed View" className="w-[600px] max-h-[80vh]">
+      <Modal open={consentOpen} onClose={() => setConsentOpen(false)} title="Citizen Consent – Detailed View">
         <div className="p-6 space-y-4">
           <div className="bg-amber-50 border border-amber-100 rounded-xl p-4 text-xs text-amber-700 flex gap-2">
             <span className="shrink-0">⚠️</span>

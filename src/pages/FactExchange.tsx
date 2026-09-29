@@ -151,7 +151,7 @@ export default function FactExchange() {
                   </div>
                   <p className="text-xs font-bold text-navy-700">{lang === 'en' ? selected.sourceDept : selected.sourceDeptMarathi}</p>
                   <p className="text-[10px] text-slate-400 mt-0.5">{selected.sourceSystem.split('(')[0]}</p>
-                  <ProtocolBadge protocol={selected.protocol} className="mt-1" />
+                  <ProtocolBadge protocol={selected.protocol} />
                 </div>
 
                 {/* Arrow with label */}

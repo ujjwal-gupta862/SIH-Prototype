@@ -1,37 +1,144 @@
-import React from 'react';
-import { clsx } from 'clsx';
+import { useState } from 'react';
+import type { ReactNode, ButtonHTMLAttributes } from 'react';
+import { X, CheckCircle, AlertTriangle, Info, AlertCircle, Shield } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
-import type { ToastMsg } from '../../types';
+import clsx from 'clsx';
 
-// ─── Button ─────────────────────────────────────────────────────────────────
-interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
-  variant?: 'primary' | 'secondary' | 'ghost' | 'danger' | 'success';
-  size?: 'sm' | 'md' | 'lg';
-  loading?: boolean;
+// ─── Toast ───────────────────────────────────────────────────────────────────
+
+export interface ToastMsg {
+  id: string;
+  type: 'success' | 'error' | 'warning' | 'info';
+  title: string;
+  message: string;
 }
 
-export function Button({ variant = 'primary', size = 'md', loading, className, children, disabled, ...props }: ButtonProps) {
-  const base = 'inline-flex items-center justify-center font-semibold rounded-xl transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-offset-1 disabled:opacity-50 disabled:cursor-not-allowed select-none';
-  const variants = {
-    primary: 'bg-navy-600 text-white hover:bg-navy-700 focus:ring-navy-600 active:scale-95',
-    secondary: 'bg-saffron-500 text-white hover:bg-saffron-600 focus:ring-saffron-500 active:scale-95',
-    ghost: 'bg-transparent text-navy-600 hover:bg-navy-50 border border-navy-200 focus:ring-navy-400',
-    danger: 'bg-danger-600 text-white hover:bg-danger-600/90 focus:ring-danger-500',
-    success: 'bg-verified-500 text-white hover:bg-verified-600 focus:ring-verified-500',
-  };
-  const sizes = {
-    sm: 'h-8 px-3 text-xs gap-1.5',
-    md: 'h-10 px-4 text-sm gap-2',
-    lg: 'h-12 px-6 text-base gap-2',
-  };
+const TOAST_ICONS: Record<ToastMsg['type'], typeof CheckCircle> = {
+  success: CheckCircle,
+  error: AlertCircle,
+  warning: AlertTriangle,
+  info: Info,
+};
+
+const TOAST_COLORS: Record<ToastMsg['type'], string> = {
+  success: 'border-verified-500 bg-verified-50',
+  error: 'border-danger-500 bg-red-50',
+  warning: 'border-saffron-500 bg-saffron-50',
+  info: 'border-navy-500 bg-navy-50',
+};
+
+const TOAST_ICON_COLORS: Record<ToastMsg['type'], string> = {
+  success: 'text-verified-600',
+  error: 'text-danger-600',
+  warning: 'text-saffron-600',
+  info: 'text-navy-600',
+};
+
+export function Toast({ toast, onRemove }: { toast: ToastMsg; onRemove: () => void }) {
+  const Icon = TOAST_ICONS[toast.type];
+  return (
+    <motion.div
+      initial={{ opacity: 0, x: 40 }}
+      animate={{ opacity: 1, x: 0 }}
+      exit={{ opacity: 0, x: 40 }}
+      className={`flex items-start gap-2 p-3 rounded-xl border-l-4 shadow-lg bg-white ${TOAST_COLORS[toast.type]} max-w-sm`}
+    >
+      <Icon className={`w-4 h-4 mt-0.5 shrink-0 ${TOAST_ICON_COLORS[toast.type]}`} />
+      <div className="flex-1 min-w-0">
+        <p className="text-xs font-semibold text-navy-800">{toast.title}</p>
+        <p className="text-[10px] text-slate-600 mt-0.5">{toast.message}</p>
+      </div>
+      <button
+        onClick={onRemove}
+        className="text-slate-400 hover:text-slate-600 transition-colors focus:outline-none"
+        aria-label="Dismiss"
+      >
+        <X className="w-3.5 h-3.5" />
+      </button>
+    </motion.div>
+  );
+}
+
+export function ToastContainer({ toasts, onRemove }: { toasts: ToastMsg[]; onRemove: (id: string) => void }) {
+  return (
+    <div className="fixed bottom-4 right-4 z-50 flex flex-col gap-2" aria-live="polite">
+      <AnimatePresence>
+        {toasts.map(t => (
+          <Toast key={t.id} toast={t} onRemove={() => onRemove(t.id)} />
+        ))}
+      </AnimatePresence>
+    </div>
+  );
+}
+
+// ─── Card ────────────────────────────────────────────────────────────────────
+
+export function Card({ children, className = '' }: { children: ReactNode; className?: string }) {
+  return (
+    <div className={clsx('bg-white rounded-xl shadow-sm border border-slate-100', className)}>
+      {children}
+    </div>
+  );
+}
+
+// ─── Badge ───────────────────────────────────────────────────────────────────
+
+const BADGE_VARIANTS: Record<string, string> = {
+  verified: 'bg-verified-50 text-verified-700 border-verified-200',
+  warning: 'bg-amber-50 text-amber-700 border-amber-200',
+  danger: 'bg-red-50 text-red-700 border-red-200',
+  neutral: 'bg-slate-50 text-slate-600 border-slate-200',
+  navy: 'bg-navy-50 text-navy-700 border-navy-200',
+  saffron: 'bg-saffron-50 text-saffron-700 border-saffron-200',
+  rest: 'bg-blue-50 text-blue-700 border-blue-200',
+  soap: 'bg-purple-50 text-purple-700 border-purple-200',
+  info: 'bg-sky-50 text-sky-700 border-sky-200',
+};
+
+export function Badge({ children, variant = 'neutral', className = '' }: { children: ReactNode; variant?: keyof typeof BADGE_VARIANTS; className?: string }) {
+  return (
+    <span className={clsx('inline-flex items-center gap-1 text-[10px] font-semibold px-2 py-0.5 rounded-md border', BADGE_VARIANTS[variant] || BADGE_VARIANTS.neutral, className)}>
+      {children}
+    </span>
+  );
+}
+
+// ─── Button ──────────────────────────────────────────────────────────────────
+
+const BTN_VARIANTS: Record<string, string> = {
+  primary: 'bg-navy-600 text-white hover:bg-navy-700 focus:ring-navy-400',
+  secondary: 'bg-white text-navy-700 border border-slate-200 hover:bg-slate-50 focus:ring-navy-300',
+  ghost: 'text-navy-600 hover:bg-navy-50 focus:ring-navy-300',
+  danger: 'bg-danger-500 text-white hover:bg-danger-600 focus:ring-danger-400',
+  success: 'bg-verified-500 text-white hover:bg-verified-600 focus:ring-verified-400',
+};
+const BTN_SIZES: Record<string, string> = {
+  sm: 'px-2.5 py-1 text-xs',
+  md: 'px-4 py-2 text-sm',
+  lg: 'px-6 py-2.5 text-sm',
+};
+
+export function Button({ children, variant = 'primary', size = 'md', loading = false, className = '', ...props }: {
+  children: ReactNode;
+  variant?: keyof typeof BTN_VARIANTS;
+  size?: keyof typeof BTN_SIZES;
+  loading?: boolean;
+  className?: string;
+} & ButtonHTMLAttributes<HTMLButtonElement>) {
   return (
     <button
-      className={clsx(base, variants[variant], sizes[size], className)}
-      disabled={disabled || loading}
+      className={clsx(
+        'inline-flex items-center justify-center gap-1.5 rounded-lg font-medium transition-colors focus:outline-none focus:ring-2',
+        BTN_VARIANTS[variant] || BTN_VARIANTS.primary,
+        BTN_SIZES[size] || BTN_SIZES.md,
+        loading && 'opacity-70 cursor-wait',
+        className,
+      )}
+      disabled={loading || props.disabled}
       {...props}
     >
       {loading && (
-        <svg className="animate-spin h-4 w-4" viewBox="0 0 24 24" fill="none">
+        <svg className="animate-spin w-3.5 h-3.5" viewBox="0 0 24 24" fill="none">
           <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
           <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
         </svg>
@@ -41,174 +148,117 @@ export function Button({ variant = 'primary', size = 'md', loading, className, c
   );
 }
 
-// ─── Card ────────────────────────────────────────────────────────────────────
-interface CardProps { children: React.ReactNode; className?: string; onClick?: () => void; }
-export function Card({ children, className, onClick }: CardProps) {
-  return (
-    <div
-      className={clsx('bg-white rounded-2xl shadow-sm border border-slate-100', onClick && 'cursor-pointer hover:shadow-md transition-shadow', className)}
-      onClick={onClick}
-    >
-      {children}
-    </div>
-  );
-}
-
-// ─── Badge ───────────────────────────────────────────────────────────────────
-type BadgeVariant = 'navy' | 'saffron' | 'verified' | 'warning' | 'danger' | 'neutral' | 'rest' | 'soap';
-export function Badge({ children, variant = 'neutral', className }: { children: React.ReactNode; variant?: BadgeVariant; className?: string }) {
-  const variants: Record<BadgeVariant, string> = {
-    navy: 'bg-navy-50 text-navy-700 border-navy-200',
-    saffron: 'bg-saffron-50 text-saffron-700 border-saffron-200',
-    verified: 'bg-verified-50 text-verified-700 border-verified-200',
-    warning: 'bg-amber-50 text-amber-700 border-amber-200',
-    danger: 'bg-red-50 text-red-700 border-red-200',
-    neutral: 'bg-slate-50 text-slate-600 border-slate-200',
-    rest: 'bg-blue-50 text-blue-700 border-blue-200',
-    soap: 'bg-purple-50 text-purple-700 border-purple-200',
-  };
-  return (
-    <span className={clsx('inline-flex items-center px-2 py-0.5 rounded-md text-xs font-semibold border', variants[variant], className)}>
-      {children}
-    </span>
-  );
-}
-
 // ─── Progress ────────────────────────────────────────────────────────────────
-export function Progress({ value, max = 100, className }: { value: number; max?: number; className?: string }) {
-  const pct = Math.round((value / max) * 100);
+
+export function Progress({ value, className = '' }: { value: number; className?: string }) {
+  const color = value >= 80 ? 'bg-verified-500' : value >= 40 ? 'bg-saffron-500' : 'bg-navy-500';
   return (
-    <div className={clsx('w-full bg-slate-100 rounded-full overflow-hidden', className)} style={{ height: 8 }}>
+    <div className={clsx('h-1.5 bg-slate-100 rounded-full overflow-hidden', className)}>
       <motion.div
-        className="h-full bg-gradient-to-r from-navy-600 to-saffron-500 rounded-full"
+        className={clsx('h-full rounded-full', color)}
         initial={{ width: 0 }}
-        animate={{ width: `${pct}%` }}
+        animate={{ width: `${value}%` }}
         transition={{ duration: 0.8, ease: 'easeOut' }}
       />
     </div>
   );
 }
 
-// ─── Status Chip ─────────────────────────────────────────────────────────────
-type StatusType = 'active' | 'completed' | 'pending' | 'exception' | 'retry' | 'sla-breach';
-export function StatusChip({ status }: { status: StatusType }) {
-  const map: Record<StatusType, { label: string; className: string; dot: string }> = {
-    active:      { label: 'In Progress', className: 'bg-blue-50 text-blue-700', dot: 'bg-blue-500 animate-pulse' },
-    completed:   { label: 'Completed', className: 'bg-verified-50 text-verified-700', dot: 'bg-verified-500' },
-    pending:     { label: 'Pending', className: 'bg-slate-50 text-slate-500', dot: 'bg-slate-400' },
-    exception:   { label: 'Exception', className: 'bg-red-50 text-red-700', dot: 'bg-danger-500 animate-pulse' },
-    retry:       { label: 'Retry', className: 'bg-amber-50 text-amber-700', dot: 'bg-warning-500 animate-pulse' },
-    'sla-breach':{ label: 'SLA Breached', className: 'bg-red-50 text-red-700', dot: 'bg-danger-600 animate-pulse' },
-  };
-  const { label, className, dot } = map[status];
+// ─── StatusChip ──────────────────────────────────────────────────────────────
+
+const STATUS_COLORS: Record<string, string> = {
+  active: 'bg-blue-50 text-blue-700',
+  completed: 'bg-verified-50 text-verified-700',
+  pending: 'bg-slate-50 text-slate-600',
+  failed: 'bg-red-50 text-red-700',
+  approved: 'bg-verified-50 text-verified-700',
+  rejected: 'bg-red-50 text-red-700',
+  processing: 'bg-saffron-50 text-saffron-700',
+  submitted: 'bg-blue-50 text-blue-700',
+  routing: 'bg-sky-50 text-sky-700',
+  paid: 'bg-verified-50 text-verified-700',
+  closed: 'bg-slate-100 text-slate-500',
+  blocked: 'bg-red-50 text-red-700',
+  referred: 'bg-purple-50 text-purple-700',
+  'needs-info': 'bg-amber-50 text-amber-700',
+  'awaiting-consent': 'bg-saffron-50 text-saffron-700',
+};
+
+export function StatusChip({ status }: { status: string }) {
   return (
-    <span className={clsx('inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold', className)}>
-      <span className={clsx('w-1.5 h-1.5 rounded-full', dot)} />
-      {label}
+    <span className={clsx('text-[10px] font-semibold px-2 py-0.5 rounded-md capitalize', STATUS_COLORS[status] || 'bg-slate-50 text-slate-600')}>
+      {status.replace(/-/g, ' ')}
     </span>
   );
 }
 
-// ─── Modal / Dialog ──────────────────────────────────────────────────────────
-interface ModalProps { open: boolean; onClose: () => void; title: string; children: React.ReactNode; className?: string; }
-export function Modal({ open, onClose, title, children, className }: ModalProps) {
+// ─── VerifiedTick ────────────────────────────────────────────────────────────
+
+export function VerifiedTick() {
   return (
-    <AnimatePresence>
-      {open && (
-        <>
-          <motion.div
-            key="backdrop"
-            className="fixed inset-0 bg-black/40 backdrop-blur-sm z-50"
-            initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-            onClick={onClose}
-          />
-          <motion.div
-            key="modal"
-            className={clsx('fixed left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 bg-white rounded-2xl shadow-2xl z-50 flex flex-col', className)}
-            initial={{ opacity: 0, scale: 0.92, y: 20 }}
-            animate={{ opacity: 1, scale: 1, y: 0 }}
-            exit={{ opacity: 0, scale: 0.92, y: 20 }}
-            transition={{ type: 'spring', stiffness: 400, damping: 30 }}
-          >
-            <div className="flex items-center justify-between px-6 pt-5 pb-4 border-b border-slate-100">
-              <h2 className="text-base font-bold text-navy-800">{title}</h2>
-              <button onClick={onClose} className="w-8 h-8 flex items-center justify-center rounded-lg text-slate-400 hover:bg-slate-100 hover:text-slate-700 transition-colors">
-                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12"/></svg>
-              </button>
-            </div>
-            <div className="flex-1 overflow-y-auto">{children}</div>
-          </motion.div>
-        </>
-      )}
-    </AnimatePresence>
-  );
-}
-
-// ─── Toast Container ─────────────────────────────────────────────────────────
-export function ToastContainer({ toasts, onRemove }: { toasts: ToastMsg[]; onRemove: (id: string) => void }) {
-  const icons: Record<ToastMsg['type'], React.ReactNode> = {
-    success: <svg className="w-5 h-5 text-verified-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7"/></svg>,
-    error:   <svg className="w-5 h-5 text-danger-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12"/></svg>,
-    warning: <svg className="w-5 h-5 text-warning-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M12 9v4m0 4h.01M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/></svg>,
-    info:    <svg className="w-5 h-5 text-navy-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>,
-  };
-  const borders: Record<ToastMsg['type'], string> = {
-    success: 'border-l-4 border-verified-500',
-    error:   'border-l-4 border-danger-500',
-    warning: 'border-l-4 border-warning-500',
-    info:    'border-l-4 border-navy-500',
-  };
-
-  return (
-    <div className="fixed top-20 right-5 z-[100] flex flex-col gap-2 w-80">
-      <AnimatePresence>
-        {toasts.map(t => (
-          <motion.div
-            key={t.id}
-            initial={{ opacity: 0, x: 80 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: 80 }}
-            className={clsx('bg-white rounded-xl shadow-lg p-4 flex gap-3 items-start', borders[t.type])}
-          >
-            <div className="shrink-0 mt-0.5">{icons[t.type]}</div>
-            <div className="flex-1 min-w-0">
-              <p className="text-sm font-semibold text-slate-800">{t.title}</p>
-              <p className="text-xs text-slate-500 mt-0.5">{t.message}</p>
-            </div>
-            <button onClick={() => onRemove(t.id)} className="shrink-0 text-slate-300 hover:text-slate-500">
-              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12"/></svg>
-            </button>
-          </motion.div>
-        ))}
-      </AnimatePresence>
-    </div>
-  );
-}
-
-// ─── Skeleton ────────────────────────────────────────────────────────────────
-export function Skeleton({ className }: { className?: string }) {
-  return <div className={clsx('animate-shimmer rounded-lg', className)} />;
-}
-
-// ─── Verified Tick ────────────────────────────────────────────────────────────
-export function VerifiedTick({ className }: { className?: string }) {
-  return (
-    <span className={clsx('inline-flex items-center gap-1 text-verified-600 text-xs font-semibold', className)}>
-      <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="currentColor">
-        <path fillRule="evenodd" d="M2.25 12c0-5.385 4.365-9.75 9.75-9.75s9.75 4.365 9.75 9.75-4.365 9.75-9.75 9.75S2.25 17.385 2.25 12zm13.36-1.814a.75.75 0 10-1.22-.872l-3.236 4.53L9.53 12.22a.75.75 0 00-1.06 1.06l2.25 2.25a.75.75 0 001.14-.094l3.75-5.25z" clipRule="evenodd"/>
-      </svg>
-      Schema Validated
+    <span className="inline-flex items-center gap-0.5 text-[9px] font-bold text-verified-600 bg-verified-50 px-1.5 py-0.5 rounded">
+      <Shield className="w-2.5 h-2.5" /> Verified
     </span>
   );
 }
 
-// ─── Section Header ──────────────────────────────────────────────────────────
-export function SectionHeader({ icon, title, subtitle, action }: { icon: React.ReactNode; title: string; subtitle?: string; action?: React.ReactNode }) {
+// ─── HealthDot ───────────────────────────────────────────────────────────────
+
+export function HealthDot({ health }: { health: 'healthy' | 'warning' | 'critical' | 'degraded' | 'down' }) {
+  const c = health === 'healthy' ? 'bg-verified-500' : health === 'warning' || health === 'degraded' ? 'bg-saffron-500' : 'bg-danger-500';
+  return <span className={clsx('inline-block w-2 h-2 rounded-full shrink-0', c, health === 'healthy' && 'animate-pulse')} />;
+}
+
+// ─── ProtocolBadge ───────────────────────────────────────────────────────────
+
+export function ProtocolBadge({ protocol }: { protocol: 'REST' | 'SOAP' | 'REST/JSON' | 'SOAP/XML' }) {
+  const isRest = protocol.includes('REST');
+  return (
+    <span className={clsx('text-[9px] font-bold px-1.5 py-0.5 rounded font-mono',
+      isRest ? 'bg-blue-50 text-blue-700' : 'bg-purple-50 text-purple-700'
+    )}>
+      {protocol}
+    </span>
+  );
+}
+
+// ─── KPICard ─────────────────────────────────────────────────────────────────
+
+export function KPICard({ icon, label, value, sub, color }: {
+  icon: ReactNode;
+  label: string;
+  value: string;
+  sub?: string;
+  color?: string;
+  trend?: 'up' | 'down';
+}) {
+  return (
+    <Card className="p-4">
+      <div className="flex items-center gap-2 mb-2">
+        <div className={clsx('p-1.5 rounded-lg', color || 'bg-navy-50 text-navy-600')}>{icon}</div>
+        <span className="text-xs text-slate-500 font-medium">{label}</span>
+      </div>
+      <p className="text-2xl font-bold text-navy-800 tabular-nums">{value}</p>
+      {sub && <p className="text-[10px] text-slate-400 mt-0.5">{sub}</p>}
+    </Card>
+  );
+}
+
+// ─── SectionHeader ───────────────────────────────────────────────────────────
+
+export function SectionHeader({ icon, title, subtitle, action }: {
+  icon?: ReactNode;
+  title: string;
+  subtitle?: string;
+  action?: ReactNode;
+}) {
   return (
     <div className="flex items-center justify-between mb-4">
-      <div className="flex items-center gap-3">
-        <div className="w-9 h-9 rounded-xl bg-navy-50 flex items-center justify-center text-navy-600">{icon}</div>
+      <div className="flex items-center gap-2">
+        {icon && <span className="text-navy-500">{icon}</span>}
         <div>
-          <h2 className="text-base font-bold text-navy-900">{title}</h2>
-          {subtitle && <p className="text-xs text-slate-500">{subtitle}</p>}
+          <h3 className="text-sm font-bold text-navy-900">{title}</h3>
+          {subtitle && <p className="text-[10px] text-slate-400 mt-0.5">{subtitle}</p>}
         </div>
       </div>
       {action}
@@ -216,45 +266,248 @@ export function SectionHeader({ icon, title, subtitle, action }: { icon: React.R
   );
 }
 
-// ─── Protocol Badge ──────────────────────────────────────────────────────────
-export function ProtocolBadge({ protocol }: { protocol: 'REST' | 'SOAP' }) {
+// ─── Tabs ────────────────────────────────────────────────────────────────────
+
+export function Tabs({ tabs, activeTab, onChange }: {
+  tabs: { id: string; label: string; count?: number }[];
+  activeTab: string;
+  onChange: (id: string) => void;
+}) {
   return (
-    <Badge variant={protocol === 'REST' ? 'rest' : 'soap'}>
-      {protocol === 'REST' ? '⚡ REST/JSON' : '🔌 SOAP/XML'}
-    </Badge>
+    <div className="flex gap-1 border-b border-slate-100 mb-4">
+      {tabs.map(t => (
+        <button
+          key={t.id}
+          onClick={() => onChange(t.id)}
+          className={clsx(
+            'px-3 py-2 text-xs font-medium rounded-t-lg transition-colors focus:outline-none',
+            activeTab === t.id
+              ? 'bg-navy-50 text-navy-700 border-b-2 border-navy-500'
+              : 'text-slate-400 hover:text-slate-600 hover:bg-slate-50'
+          )}
+        >
+          {t.label}
+          {t.count !== undefined && (
+            <span className="ml-1.5 text-[9px] bg-slate-100 text-slate-500 px-1.5 py-0.5 rounded-full">{t.count}</span>
+          )}
+        </button>
+      ))}
+    </div>
   );
 }
 
-// ─── Health Dot ────────────────────────────────────────────────────────────
-export function HealthDot({ health }: { health: 'healthy' | 'warning' | 'critical' }) {
-  const map = {
-    healthy:  'bg-verified-500',
-    warning:  'bg-warning-500',
-    critical: 'bg-danger-500',
-  };
-  return <span className={clsx('inline-block w-2.5 h-2.5 rounded-full', map[health], health !== 'critical' && 'animate-pulse')} />;
-}
+// ─── Drawer ──────────────────────────────────────────────────────────────────
 
-// ─── KPI Card ──────────────────────────────────────────────────────────────
-export function KPICard({ icon, label, value, sub, trend, color }: {
-  icon: React.ReactNode; label: string; value: string | number; sub?: string;
-  trend?: 'up' | 'down'; color?: string;
+export function Drawer({ open, onClose, title, children }: {
+  open: boolean;
+  onClose: () => void;
+  title: string;
+  children: ReactNode;
 }) {
   return (
-    <Card className="p-5 flex gap-4 items-start">
-      <div className={clsx('w-11 h-11 rounded-xl flex items-center justify-center shrink-0', color || 'bg-navy-50 text-navy-600')}>
-        {icon}
-      </div>
-      <div className="flex-1 min-w-0">
-        <p className="text-xs text-slate-500 font-medium">{label}</p>
-        <p className="text-2xl font-bold text-navy-900 mt-0.5">{value}</p>
-        {sub && <p className="text-xs text-slate-400 mt-0.5">{sub}</p>}
-      </div>
-      {trend && (
-        <span className={clsx('text-xs font-semibold px-2 py-0.5 rounded-full', trend === 'up' ? 'bg-verified-50 text-verified-600' : 'bg-red-50 text-red-600')}>
-          {trend === 'up' ? '↑' : '↓'}
-        </span>
+    <AnimatePresence>
+      {open && (
+        <>
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 0.3 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 bg-black z-40"
+            onClick={onClose}
+          />
+          <motion.div
+            initial={{ x: '100%' }}
+            animate={{ x: 0 }}
+            exit={{ x: '100%' }}
+            transition={{ type: 'spring', damping: 25, stiffness: 200 }}
+            className="fixed right-0 top-0 h-full w-96 bg-white shadow-2xl z-50 flex flex-col"
+          >
+            <div className="flex items-center justify-between p-4 border-b border-slate-100">
+              <h3 className="text-sm font-bold text-navy-800">{title}</h3>
+              <button onClick={onClose} className="p-1 hover:bg-slate-100 rounded-lg transition-colors" aria-label="Close">
+                <X className="w-4 h-4 text-slate-400" />
+              </button>
+            </div>
+            <div className="flex-1 overflow-y-auto p-4">
+              {children}
+            </div>
+          </motion.div>
+        </>
       )}
-    </Card>
+    </AnimatePresence>
+  );
+}
+
+// ─── Modal ───────────────────────────────────────────────────────────────────
+
+export function Modal({ open, onClose, title, children }: {
+  open: boolean;
+  onClose: () => void;
+  title: string;
+  children: ReactNode;
+}) {
+  return (
+    <AnimatePresence>
+      {open && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center">
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 0.4 }}
+            exit={{ opacity: 0 }}
+            className="absolute inset-0 bg-black"
+            onClick={onClose}
+          />
+          <motion.div
+            initial={{ opacity: 0, scale: 0.95 }}
+            animate={{ opacity: 1, scale: 1 }}
+            exit={{ opacity: 0, scale: 0.95 }}
+            className="relative bg-white rounded-xl shadow-2xl max-w-lg w-full mx-4 max-h-[80vh] flex flex-col"
+          >
+            <div className="flex items-center justify-between p-4 border-b border-slate-100">
+              <h3 className="text-sm font-bold text-navy-800">{title}</h3>
+              <button onClick={onClose} className="p-1 hover:bg-slate-100 rounded-lg" aria-label="Close">
+                <X className="w-4 h-4 text-slate-400" />
+              </button>
+            </div>
+            <div className="flex-1 overflow-y-auto p-4">
+              {children}
+            </div>
+          </motion.div>
+        </div>
+      )}
+    </AnimatePresence>
+  );
+}
+
+// ─── Sparkline ───────────────────────────────────────────────────────────────
+
+export function Sparkline({ data, width = 80, height = 24, color = '#2B5ECC' }: {
+  data: number[];
+  width?: number;
+  height?: number;
+  color?: string;
+}) {
+  if (data.length < 2) return null;
+  const max = Math.max(...data);
+  const min = Math.min(...data);
+  const range = max - min || 1;
+  const points = data.map((v, i) => {
+    const x = (i / (data.length - 1)) * width;
+    const y = height - ((v - min) / range) * (height - 4) - 2;
+    return `${x},${y}`;
+  }).join(' ');
+  return (
+    <svg width={width} height={height} className="inline-block">
+      <polyline fill="none" stroke={color} strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" points={points} />
+    </svg>
+  );
+}
+
+// ─── JsonView ────────────────────────────────────────────────────────────────
+
+export function JsonView({ data, collapsed = false }: { data: unknown; collapsed?: boolean }) {
+  const [open, setOpen] = useState(!collapsed);
+  if (data === null || data === undefined) return <span className="text-slate-400 text-xs font-mono">null</span>;
+  if (typeof data === 'string') return <span className="text-verified-600 text-xs font-mono">"{data}"</span>;
+  if (typeof data === 'number' || typeof data === 'boolean') return <span className="text-saffron-600 text-xs font-mono">{String(data)}</span>;
+  if (Array.isArray(data)) {
+    return (
+      <div className="text-xs font-mono">
+        <button onClick={() => setOpen(!open)} className="text-slate-400 hover:text-navy-600">
+          {open ? '▼' : '▶'} [{data.length}]
+        </button>
+        {open && (
+          <div className="ml-4 border-l border-slate-100 pl-2">
+            {data.map((item, i) => <div key={i}><JsonView data={item} collapsed /></div>)}
+          </div>
+        )}
+      </div>
+    );
+  }
+  if (typeof data === 'object') {
+    const entries = Object.entries(data as Record<string, unknown>);
+    return (
+      <div className="text-xs font-mono">
+        <button onClick={() => setOpen(!open)} className="text-slate-400 hover:text-navy-600">
+          {open ? '▼' : '▶'} {'{'}...{'}'}
+        </button>
+        {open && (
+          <div className="ml-4 border-l border-slate-100 pl-2">
+            {entries.map(([k, v]) => (
+              <div key={k}>
+                <span className="text-navy-600">{k}</span>: <JsonView data={v} collapsed />
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+    );
+  }
+  return null;
+}
+
+// ─── Stat ────────────────────────────────────────────────────────────────────
+
+export function Stat({ label, value, sub, icon }: {
+  label: string;
+  value: string | number;
+  sub?: string;
+  icon?: ReactNode;
+}) {
+  return (
+    <div className="bg-slate-50 rounded-lg p-3">
+      <div className="flex items-center gap-1.5 mb-1">
+        {icon}
+        <span className="text-[10px] text-slate-400 uppercase tracking-wide font-medium">{label}</span>
+      </div>
+      <p className="text-lg font-bold text-navy-800 tabular-nums">{value}</p>
+      {sub && <p className="text-[10px] text-slate-400 mt-0.5">{sub}</p>}
+    </div>
+  );
+}
+
+// ─── Table ───────────────────────────────────────────────────────────────────
+
+export function Table({ children, className = '' }: { children: ReactNode; className?: string }) {
+  return (
+    <div className={clsx('overflow-x-auto', className)}>
+      <table className="w-full text-xs">
+        {children}
+      </table>
+    </div>
+  );
+}
+
+export function Th({ children, className = '' }: { children: ReactNode; className?: string }) {
+  return <th className={clsx('text-left text-[10px] font-semibold text-slate-400 uppercase tracking-wide px-3 py-2 border-b border-slate-100', className)}>{children}</th>;
+}
+
+export function Td({ children, className = '' }: { children: ReactNode; className?: string }) {
+  return <td className={clsx('px-3 py-2.5 border-b border-slate-50 text-slate-700', className)}>{children}</td>;
+}
+
+// ─── EmptyState ──────────────────────────────────────────────────────────────
+
+export function EmptyState({ icon, title, message }: { icon?: ReactNode; title: string; message?: string }) {
+  return (
+    <div className="flex flex-col items-center justify-center py-12 text-center">
+      {icon && <div className="text-slate-300 mb-3">{icon}</div>}
+      <p className="text-sm font-semibold text-slate-500">{title}</p>
+      {message && <p className="text-xs text-slate-400 mt-1 max-w-xs">{message}</p>}
+    </div>
+  );
+}
+
+// ─── LoadingState ────────────────────────────────────────────────────────────
+
+export function LoadingState({ message = 'Loading...' }: { message?: string }) {
+  return (
+    <div className="flex flex-col items-center justify-center py-12">
+      <svg className="animate-spin w-6 h-6 text-navy-500 mb-3" viewBox="0 0 24 24" fill="none">
+        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+      </svg>
+      <p className="text-xs text-slate-400">{message}</p>
+    </div>
   );
 }

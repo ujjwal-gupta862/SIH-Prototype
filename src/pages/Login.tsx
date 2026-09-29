@@ -113,7 +113,12 @@ export default function Login() {
               ? 'Government Digital Platform Interoperability · Smart India Hackathon 2026'
               : 'शासकीय डिजिटल प्लॅटफॉर्म इंटरऑपरेबिलिटी · SIH 2026'}
           </p>
-          <p className="text-navy-400 text-xs mt-1">PS SIH26129 · Team Last Commit</p>
+          <div className="flex items-center justify-center gap-2 mt-3">
+            <span className="bg-saffron-500/20 text-saffron-300 border border-saffron-500/30 px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider">
+              Prototype • Synthetic Data
+            </span>
+          </div>
+          <p className="text-navy-400 text-xs mt-2">PS SIH26129 · Team Last Commit</p>
 
           {/* Stats row */}
           <div className="mt-10 grid grid-cols-3 gap-6">

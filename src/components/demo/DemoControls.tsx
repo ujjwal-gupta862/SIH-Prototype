@@ -1,12 +1,25 @@
+import React from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { clsx } from 'clsx';
 import { useDemoMode } from '../../hooks/useDemoMode';
-import { useApp } from '../../context/AppContext';
-import { DEMO_STEPS } from '../../data/mockData';
+import { useSim } from '../../sim/store';
+import { Play, Pause, FastForward, RotateCcw, AlertTriangle, Zap, Maximize2, SkipForward } from 'lucide-react';
 
 export function DemoControls() {
-  const { state, dispatch } = useApp();
-  const { demoVisible, controlsHidden, autoPlay, demoStep, goNext, reset, goTo, currentStep } = useDemoMode();
+  const { 
+    demoVisible, 
+    controlsHidden, 
+    autoPlay, 
+    toggleAutoPlay,
+    toggleDemo,
+    reset,
+    triggerOutage,
+    triggerJourney,
+    caption,
+    progress
+  } = useDemoMode();
+
+  const { state, engine } = useSim();
 
   if (controlsHidden) return null;
 
@@ -18,11 +31,11 @@ export function DemoControls() {
           <motion.button
             initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
-            onClick={() => dispatch({ type: 'TOGGLE_DEMO' })}
-            className="bg-navy-800/90 backdrop-blur text-white text-xs font-semibold px-4 py-2 rounded-full shadow-lg flex items-center gap-2 hover:bg-navy-700 transition-colors"
+            onClick={toggleDemo}
+            className="bg-navy-900/90 backdrop-blur border border-white/20 text-white text-xs font-bold px-4 py-2 rounded-full shadow-2xl flex items-center gap-2 hover:bg-navy-800 transition-colors"
           >
             <kbd className="bg-white/20 rounded px-1.5 py-0.5 font-mono text-[10px]">D</kbd>
-            Demo Controls
+            Demo Controller
           </motion.button>
         )}
       </div>
@@ -35,94 +48,118 @@ export function DemoControls() {
             initial={{ opacity: 0, y: 20, scale: 0.96 }}
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: 20, scale: 0.96 }}
-            className="fixed bottom-4 left-1/2 -translate-x-1/2 z-[200] bg-navy-900/95 backdrop-blur border border-white/10 rounded-2xl shadow-2xl w-[720px] overflow-hidden"
+            className="fixed bottom-6 right-6 z-[200] bg-slate-900/95 backdrop-blur-md border border-white/10 rounded-2xl shadow-2xl w-[360px] overflow-hidden"
           >
             {/* Header */}
-            <div className="flex items-center justify-between px-5 py-3 border-b border-white/10">
-              <div className="flex items-center gap-3">
-                <span className="text-saffron-400 font-bold text-sm">🎬 Demo Mode</span>
-                <span className="bg-saffron-500/20 text-saffron-300 text-[10px] font-semibold px-2 py-0.5 rounded">SIH 2026 · Last Commit</span>
-              </div>
+            <div className="flex items-center justify-between px-4 py-3 border-b border-white/10 bg-black/20">
               <div className="flex items-center gap-2">
-                <button
-                  onClick={() => dispatch({ type: 'TOGGLE_AUTO_PLAY' })}
-                  className={clsx(
-                    'flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors',
-                    autoPlay ? 'bg-saffron-500 text-white' : 'bg-white/10 text-white/70 hover:bg-white/20'
-                  )}
-                >
-                  {autoPlay ? '⏸ Auto-Play ON' : '▶ Auto-Play'}
-                </button>
-                <button onClick={reset} className="px-3 py-1.5 rounded-lg bg-white/10 text-white/70 hover:bg-white/20 text-xs font-semibold transition-colors">
-                  <kbd className="font-mono text-[10px] mr-1">R</kbd> Reset
-                </button>
-                <button onClick={goNext} className="px-3 py-1.5 rounded-lg bg-white/10 text-white/70 hover:bg-white/20 text-xs font-semibold transition-colors">
-                  Next <kbd className="font-mono text-[10px] ml-1">N</kbd>
-                </button>
-                <button onClick={() => dispatch({ type: 'TOGGLE_DEMO' })} className="w-7 h-7 flex items-center justify-center rounded-lg text-white/40 hover:text-white hover:bg-white/10 transition-colors text-sm">✕</button>
+                <div className="w-2 h-2 rounded-full bg-red-500 animate-pulse" />
+                <span className="text-white font-bold text-sm tracking-wide">Director</span>
               </div>
+              <button onClick={toggleDemo} className="w-6 h-6 flex items-center justify-center rounded-lg text-white/40 hover:text-white hover:bg-white/10 transition-colors">✕</button>
             </div>
 
-            {/* Steps */}
-            <div className="p-4">
-              <div className="flex gap-2 flex-wrap">
-                {DEMO_STEPS.map((step, i) => (
+            <div className="p-4 space-y-4">
+              {/* Playback Controls */}
+              <div className="bg-black/30 rounded-xl p-2 flex items-center justify-between">
+                <button
+                  onClick={toggleAutoPlay}
+                  className={clsx(
+                    'flex items-center justify-center gap-2 px-4 py-2 rounded-lg text-xs font-bold transition-all flex-1',
+                    autoPlay ? 'bg-saffron-500 text-white shadow-lg shadow-saffron-500/20' : 'bg-white/5 text-white hover:bg-white/10'
+                  )}
+                >
+                  {autoPlay ? <Pause className="w-4 h-4 fill-current" /> : <Play className="w-4 h-4 fill-current" />}
+                  {autoPlay ? 'Pause Demo' : 'Auto-Play Demo'}
+                </button>
+              </div>
+
+              {/* Simulation Speed */}
+              <div className="flex items-center gap-2 bg-black/20 rounded-xl p-1">
+                {[0.5, 1, 2, 4].map(s => (
                   <button
-                    key={step.id}
-                    onClick={() => goTo(i)}
+                    key={s}
+                    onClick={() => engine.setSpeed(s as any)}
                     className={clsx(
-                      'flex items-center gap-2 px-3 py-2 rounded-xl text-xs font-medium transition-all',
-                      i === demoStep
-                        ? 'bg-saffron-500 text-white shadow-lg scale-105'
-                        : i < demoStep
-                        ? 'bg-verified-500/20 text-verified-300 hover:bg-verified-500/30'
-                        : 'bg-white/10 text-white/60 hover:bg-white/20 hover:text-white/90'
+                      'flex-1 py-1.5 rounded-lg text-xs font-semibold transition-colors',
+                      state.speed === s ? 'bg-white/20 text-white' : 'text-white/40 hover:text-white/80 hover:bg-white/5'
                     )}
                   >
-                    <span className={clsx('w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-bold shrink-0',
-                      i === demoStep ? 'bg-white text-saffron-600' : i < demoStep ? 'bg-verified-500 text-white' : 'bg-white/20 text-white/60'
-                    )}>
-                      {i < demoStep ? '✓' : i + 1}
-                    </span>
-                    {step.label}
+                    {s}x
                   </button>
                 ))}
               </div>
 
-              {/* Current step tip */}
-              <div className="mt-3 bg-white/5 rounded-xl px-4 py-2.5 flex items-start gap-3">
-                <span className="text-saffron-400 shrink-0 mt-0.5">💡</span>
-                <div>
-                  <p className="text-white/90 text-xs font-semibold">{currentStep?.label}</p>
-                  <p className="text-white/50 text-xs mt-0.5">{currentStep?.tip}</p>
-                </div>
-                <div className="ml-auto text-white/30 text-xs shrink-0">
-                  {demoStep + 1} / {DEMO_STEPS.length}
+              {/* Quick Actions */}
+              <div className="space-y-2">
+                <div className="text-[10px] uppercase font-bold text-white/30 tracking-widest px-1">Scenarios</div>
+                <div className="grid grid-cols-2 gap-2">
+                  <button
+                    onClick={triggerJourney}
+                    className="flex flex-col items-center justify-center gap-1.5 p-3 rounded-xl bg-white/5 border border-white/5 hover:bg-white/10 hover:border-white/10 transition-all group"
+                  >
+                    <Zap className="w-5 h-5 text-verified-400 group-hover:scale-110 transition-transform" />
+                    <span className="text-xs font-medium text-white/80">Start Journey</span>
+                  </button>
+                  <button
+                    onClick={triggerOutage}
+                    className="flex flex-col items-center justify-center gap-1.5 p-3 rounded-xl bg-white/5 border border-white/5 hover:bg-white/10 hover:border-white/10 transition-all group"
+                  >
+                    <AlertTriangle className="w-5 h-5 text-amber-400 group-hover:scale-110 transition-transform" />
+                    <span className="text-xs font-medium text-white/80">Rev Outage</span>
+                  </button>
                 </div>
               </div>
-            </div>
 
-            {/* Keyboard Shortcuts */}
-            <div className="flex items-center gap-4 px-5 pb-3 text-[10px] text-white/30 border-t border-white/5 pt-2">
-              <span><kbd className="font-mono bg-white/10 px-1.5 py-0.5 rounded text-white/50">D</kbd> Toggle panel</span>
-              <span><kbd className="font-mono bg-white/10 px-1.5 py-0.5 rounded text-white/50">N</kbd> Next scene</span>
-              <span><kbd className="font-mono bg-white/10 px-1.5 py-0.5 rounded text-white/50">R</kbd> Reset</span>
-              <span><kbd className="font-mono bg-white/10 px-1.5 py-0.5 rounded text-white/50">A</kbd> Auto-play</span>
-              <span><kbd className="font-mono bg-white/10 px-1.5 py-0.5 rounded text-white/50">H</kbd> Hide all</span>
-              <div className="ml-auto flex items-center gap-1.5">
-                <span className="w-1.5 h-1.5 rounded-full bg-verified-400 animate-pulse" />
-                <span className="text-white/30">{autoPlay ? 'Auto-advancing every 9s' : 'Manual navigation'}</span>
+              {/* Reset */}
+              <button onClick={reset} className="w-full flex items-center justify-center gap-2 py-2 rounded-xl text-xs font-semibold text-white/40 hover:text-white hover:bg-white/10 transition-colors mt-2">
+                <RotateCcw className="w-3.5 h-3.5" /> Reset Environment
+              </button>
+            </div>
+            
+            {/* Keyboard Shortcuts Footer */}
+            <div className="bg-black/40 px-4 py-2 flex items-center justify-between text-[10px] text-white/30">
+              <div className="flex gap-3">
+                <span><kbd className="font-mono bg-white/10 px-1 py-0.5 rounded text-white/50">Space</kbd> Play</span>
+                <span><kbd className="font-mono bg-white/10 px-1 py-0.5 rounded text-white/50">D</kbd> Hide</span>
+              </div>
+              <div>SIH 2026 Prototype</div>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Presentation Captions (Lower Third) */}
+      <AnimatePresence>
+        {caption && (
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: 20 }}
+            className="fixed bottom-12 left-1/2 -translate-x-1/2 z-[150] max-w-4xl w-full px-8 pointer-events-none"
+          >
+            <div className="bg-navy-900/80 backdrop-blur-xl border-t-4 border-saffron-500 rounded-2xl shadow-2xl overflow-hidden flex">
+              <div className="bg-saffron-500 flex items-center justify-center px-6 shrink-0">
+                <span className="text-4xl">💡</span>
+              </div>
+              <div className="p-6">
+                <p className="text-2xl font-bold text-white leading-snug tracking-wide shadow-black/50 drop-shadow-md">
+                  {caption}
+                </p>
               </div>
             </div>
           </motion.div>
         )}
       </AnimatePresence>
 
-      {/* Prototype badge (always visible, bottom-right) */}
-      {!controlsHidden && (
-        <div className="fixed bottom-4 right-4 z-[190] flex items-center gap-1.5 bg-navy-900/80 backdrop-blur border border-white/10 rounded-full px-3 py-1.5">
-          <span className="w-1.5 h-1.5 rounded-full bg-saffron-400 animate-pulse" />
-          <span className="text-white/60 text-[10px] font-medium">Prototype · Synthetic data · SIH 2026</span>
+      {/* Global Progress Bar (Top) */}
+      {autoPlay && (
+        <div className="fixed top-0 left-0 right-0 h-1.5 bg-black/20 z-[300]">
+          <motion.div 
+            className="h-full bg-saffron-500" 
+            style={{ width: \`\${progress * 100}%\` }}
+            layout
+          />
         </div>
       )}
     </>

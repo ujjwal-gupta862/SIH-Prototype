@@ -1,252 +1,186 @@
-import { useState } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
-import { clsx } from 'clsx';
-import { useApp } from '../context/AppContext';
-import { OFFICER_QUEUE, VERIFIED_FACTS, CASE_ID } from '../data/mockData';
-import { Card, Badge, Button, StatusChip, VerifiedTick, ProtocolBadge, Progress } from '../components/ui';
-import { officerApprove } from '../hooks/useSimApi';
-import type { OfficerCase } from '../types';
+import React, { useState } from 'react';
+import { useSim } from '../sim/store';
+import { Card, SectionHeader, Table, Th, Td, StatusChip, Badge, Button, Drawer, Modal } from '../components/ui';
+import { Briefcase, CheckCircle, Clock, Shield, ArrowRight } from 'lucide-react';
 
-export default function OfficerConsole() {
-  const { state, dispatch, addToast } = useApp();
-  const lang = state.language;
-  const [selectedCase, setSelectedCase] = useState<OfficerCase>(OFFICER_QUEUE[0]);
-  const [approving, setApproving] = useState(false);
-  const [showReferralAnim, setShowReferralAnim] = useState(false);
+function timeAgo(dateString: string) {
+  const diff = Date.now() - new Date(dateString).getTime();
+  const days = Math.floor(diff / (1000 * 60 * 60 * 24));
+  const hours = Math.floor(diff / (1000 * 60 * 60));
+  if (days > 0) return `${days}d ago`;
+  if (hours > 0) return `${hours}h ago`;
+  return 'just now';
+}
 
-  const isRevenue = state.role === 'officer-revenue';
-  const officerName = isRevenue ? 'Meena Kulkarni' : 'Priya Sharma';
-  const officerDept = isRevenue ? 'Revenue Department' : 'Higher Education Department';
-  const alreadyApproved = isRevenue ? state.officerApprovedRevenue : state.officerApprovedHigherEd;
+function timeDue(dateString: string) {
+  const diff = new Date(dateString).getTime() - Date.now();
+  const days = Math.floor(diff / (1000 * 60 * 60 * 24));
+  const hours = Math.floor(diff / (1000 * 60 * 60));
+  if (diff < 0) return 'Overdue';
+  if (days > 0) return `in ${days}d`;
+  if (hours > 0) return `in ${hours}h`;
+  return 'due soon';
+}
 
-  const t = (en: string, mr: string) => lang === 'en' ? en : mr;
+export function OfficerConsole() {
+  const { state, dispatch } = useSim();
+  const [selectedCaseId, setSelectedCaseId] = useState<string | null>(null);
+  const [rejectModalOpen, setRejectModalOpen] = useState(false);
+  const [rejectReason, setRejectReason] = useState('');
 
-  const handleApprove = async () => {
-    setApproving(true);
-    await officerApprove();
-    if (isRevenue) dispatch({ type: 'APPROVE_REVENUE' });
-    else dispatch({ type: 'APPROVE_HIGHER_ED' });
-    setApproving(false);
-    setShowReferralAnim(true);
-    addToast({
-      type: 'success',
-      title: `${isRevenue ? 'Revenue' : 'Higher Education'} Approved ✓`,
-      message: isRevenue
-        ? 'Case auto-referred to Higher Education Dept with pre-verified facts.'
-        : 'Scholarship approved. DBT transfer initiated — ₹25,000.',
-    });
-    setTimeout(() => setShowReferralAnim(false), 3500);
+  const activeCase = state.cases.find(c => c.id === selectedCaseId);
+
+  // Filter cases for officer (e.g. pending ones)
+  const pendingCases = state.cases.filter(c => ['submitted', 'processing', 'referred', 'needs-info'].includes(c.status));
+
+  const handleApprove = () => {
+    if (activeCase) {
+      dispatch('approve', { caseId: activeCase.id });
+      setSelectedCaseId(null);
+    }
   };
 
-  const slaColor = (h: number) => h < 0 ? 'text-danger-600 bg-red-50' : h < 12 ? 'text-warning-600 bg-amber-50' : 'text-verified-600 bg-verified-50';
-  const slaLabel = (h: number) => h < 0 ? `${Math.abs(h)}h overdue` : `${h}h remaining`;
+  const handleReject = () => {
+    if (activeCase && rejectReason) {
+      dispatch('reject', { caseId: activeCase.id, reason: rejectReason });
+      setRejectModalOpen(false);
+      setSelectedCaseId(null);
+    }
+  };
 
   return (
-    <div className="h-full bg-slate-50 p-6 overflow-y-auto">
-      {/* Header */}
-      <div className="flex items-center justify-between mb-5">
-        <div>
-          <h1 className="text-xl font-black text-navy-900">{t('Officer Console', 'अधिकारी कन्सोल')}</h1>
-          <p className="text-slate-500 text-sm">{officerName} · {officerDept}</p>
-        </div>
-        <div className="flex items-center gap-3">
-          <div className="flex items-center gap-1.5 bg-navy-50 border border-navy-100 rounded-lg px-3 py-1.5 text-xs">
-            <span className="w-1.5 h-1.5 rounded-full bg-saffron-500 animate-pulse" />
-            <span className="text-navy-600 font-semibold">{OFFICER_QUEUE.length} cases in queue</span>
-          </div>
-          <Badge variant="danger">1 SLA Breach</Badge>
-        </div>
-      </div>
+    <div className="max-w-6xl mx-auto space-y-6">
+      <SectionHeader 
+        icon={<Briefcase className="w-5 h-5" />} 
+        title="Officer Inbox" 
+        subtitle="Review and process citizen applications"
+      />
 
-      <div className="grid grid-cols-12 gap-5">
-        {/* Queue */}
-        <div className="col-span-4">
-          <Card className="p-4">
-            <h2 className="text-sm font-bold text-navy-900 mb-3">{t('Case Queue', 'केस रांग')}</h2>
-            <div className="space-y-2">
-              {OFFICER_QUEUE.map(c => (
-                <div
-                  key={c.id}
-                  onClick={() => setSelectedCase(c)}
-                  className={clsx(
-                    'border rounded-xl p-3 cursor-pointer transition-all',
-                    selectedCase.id === c.id ? 'border-navy-300 bg-navy-50 shadow-sm' :
-                    c.status === 'sla-breach' ? 'border-red-200 bg-red-50/30 hover:border-red-300' :
-                    'border-slate-100 hover:border-navy-200 hover:shadow-sm'
-                  )}
-                >
-                  <div className="flex items-start justify-between mb-1">
-                    <div>
-                      <p className="text-xs font-bold text-navy-800">{c.citizen}</p>
-                      <p className="text-[10px] text-slate-400">{c.id}</p>
+      <Card className="p-0 overflow-hidden">
+        <Table>
+          <thead>
+            <tr>
+              <Th>Case ID</Th>
+              <Th>Citizen</Th>
+              <Th>Service</Th>
+              <Th>Status</Th>
+              <Th>SLA Due</Th>
+              <Th className="text-right">Action</Th>
+            </tr>
+          </thead>
+          <tbody>
+            {pendingCases.map(c => {
+              const slaDate = new Date(c.slaDueAt);
+              const isOverdue = slaDate < new Date();
+              return (
+                <tr key={c.id} className="hover:bg-slate-50 transition-colors">
+                  <Td className="font-mono text-navy-600 font-medium">{c.id}</Td>
+                  <Td>{c.citizenName}</Td>
+                  <Td>{c.service}</Td>
+                  <Td><StatusChip status={c.status} /></Td>
+                  <Td>
+                    <div className={`flex items-center gap-1 ${isOverdue ? 'text-red-600' : 'text-slate-600'}`}>
+                      <Clock className="w-3 h-3" />
+                      {timeDue(c.slaDueAt)}
                     </div>
-                    {c.status === 'sla-breach' ? (
-                      <span className="text-[10px] font-bold text-danger-600 bg-red-50 border border-red-200 px-1.5 py-0.5 rounded-md">SLA ⚠</span>
-                    ) : c.priority === 'high' ? (
-                      <span className="text-[10px] font-bold text-saffron-700 bg-saffron-50 border border-saffron-200 px-1.5 py-0.5 rounded-md">High</span>
-                    ) : (
-                      <span className="text-[10px] text-slate-400 bg-slate-50 border border-slate-200 px-1.5 py-0.5 rounded-md">Normal</span>
-                    )}
-                  </div>
-                  <p className="text-[10px] text-slate-500 mb-2 leading-tight">{c.scheme}</p>
-                  <div className="flex items-center justify-between">
-                    <div className={clsx('text-[10px] font-semibold px-2 py-0.5 rounded-md', slaColor(c.slaHoursLeft))}>
-                      {slaLabel(c.slaHoursLeft)}
-                    </div>
-                    {c.verificationComplete && <VerifiedTick />}
-                  </div>
-                </div>
-              ))}
+                  </Td>
+                  <Td className="text-right">
+                    <Button variant="secondary" size="sm" onClick={() => setSelectedCaseId(c.id)}>Review</Button>
+                  </Td>
+                </tr>
+              );
+            })}
+            {pendingCases.length === 0 && (
+              <tr>
+                <td colSpan={6} className="text-center py-8 text-slate-400 text-sm">No pending cases in your inbox.</td>
+              </tr>
+            )}
+          </tbody>
+        </Table>
+      </Card>
+
+      <Drawer
+        open={!!selectedCaseId}
+        onClose={() => setSelectedCaseId(null)}
+        title={`Case Review: ${activeCase?.id}`}
+      >
+        {activeCase && (
+          <div className="space-y-6">
+            <div>
+              <h4 className="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-2">Applicant Info</h4>
+              <p className="font-bold text-navy-900 text-lg">{activeCase.citizenName}</p>
+              <p className="text-sm text-slate-600">{activeCase.service}</p>
             </div>
-          </Card>
-        </div>
 
-        {/* Case Detail */}
-        <div className="col-span-8">
-          <AnimatePresence mode="wait">
-            <motion.div
-              key={selectedCase.id}
-              initial={{ opacity: 0, x: 20 }}
-              animate={{ opacity: 1, x: 0 }}
-              exit={{ opacity: 0, x: -20 }}
-              className="flex flex-col gap-4"
-            >
-              {/* Case header */}
-              <Card className="p-5">
-                <div className="flex items-start justify-between mb-4">
-                  <div>
-                    <div className="flex items-center gap-3 mb-1">
-                      <h2 className="text-base font-black text-navy-900">{selectedCase.citizen}</h2>
-                      <StatusChip status={selectedCase.status === 'sla-breach' ? 'sla-breach' : alreadyApproved && selectedCase.id === CASE_ID ? 'completed' : 'pending'} />
+            <Card className="p-4 border-l-4 border-l-verified-500 bg-verified-50/30">
+              <h4 className="text-xs font-semibold text-navy-800 flex items-center gap-2 mb-3">
+                <Shield className="w-4 h-4 text-verified-600" /> Pre-Verified Facts
+              </h4>
+              <div className="space-y-3">
+                {activeCase.facts.length > 0 ? activeCase.facts.map(f => (
+                  <div key={f.id} className="flex justify-between items-center text-sm border-b border-slate-100 pb-2 last:border-0">
+                    <span className="text-slate-600">{f.label}</span>
+                    <div className="text-right">
+                      <span className="font-medium text-navy-900 block">{f.value}</span>
+                      <span className="text-[10px] text-verified-600 flex items-center gap-1 justify-end">
+                        <CheckCircle className="w-3 h-3" /> Source: {f.sourceDeptId}
+                      </span>
                     </div>
-                    <p className="text-xs text-slate-500">{selectedCase.id} · {selectedCase.scheme}</p>
                   </div>
-                  <div className="text-right">
-                    <p className="text-[10px] text-slate-400">Submitted</p>
-                    <p className="text-xs font-semibold text-navy-700">{selectedCase.submitted}</p>
-                    <p className="text-[10px] text-slate-400 mt-1">SLA Deadline</p>
-                    <p className={clsx('text-xs font-semibold', selectedCase.slaHoursLeft < 0 ? 'text-danger-600' : 'text-navy-700')}>{selectedCase.slaDeadline}</p>
-                  </div>
-                </div>
-                {selectedCase.id === CASE_ID && (
-                  <>
-                    <Progress value={57} className="mb-2" />
-                    <p className="text-xs text-slate-400 text-right">Stage 5/7</p>
-                  </>
+                )) : (
+                  <p className="text-xs text-slate-500 italic">Simulate data fetch to see facts.</p>
                 )}
-
-                {/* SLA breach alert */}
-                {selectedCase.status === 'sla-breach' && (
-                  <div className="mt-3 bg-red-50 border border-red-200 rounded-xl p-3 flex gap-2">
-                    <span className="text-red-500 text-sm shrink-0">🚨</span>
-                    <div className="text-xs">
-                      <p className="font-bold text-red-700">SLA Breach — {Math.abs(selectedCase.slaHoursLeft)} hours overdue</p>
-                      <p className="text-red-500 mt-0.5">This case has exceeded the 2-day SLA for Social Justice verification. Escalation recommended.</p>
-                    </div>
-                    <Button variant="danger" size="sm" className="ml-auto shrink-0">Escalate</Button>
-                  </div>
-                )}
-              </Card>
-
-              {/* Pre-verified facts */}
-              {selectedCase.id === CASE_ID && (
-                <Card className="p-5">
-                  <div className="flex items-center justify-between mb-4">
-                    <h3 className="text-sm font-bold text-navy-900">{t('Pre-Verified Facts', 'पूर्व-सत्यापित तथ्ये')}</h3>
-                    <Badge variant="verified">No manual checks needed</Badge>
-                  </div>
-                  <div className="grid grid-cols-2 gap-3">
-                    {VERIFIED_FACTS.map(f => (
-                      <div key={f.id} className="flex items-start gap-3 bg-verified-50 border border-verified-100 rounded-xl p-3">
-                        <span className="text-lg shrink-0">{f.id === 'VF-001' ? '💰' : f.id === 'VF-002' ? '🌾' : f.id === 'VF-003' ? '📄' : '🎓'}</span>
-                        <div className="flex-1 min-w-0">
-                          <div className="flex items-center gap-1.5 mb-0.5">
-                            <p className="text-xs font-bold text-navy-800 leading-tight">{f.label}</p>
-                            <VerifiedTick />
-                          </div>
-                          <p className="text-xs text-navy-600 font-semibold truncate">{f.value}</p>
-                          <div className="flex gap-1 mt-1">
-                            <ProtocolBadge protocol={f.protocol} />
-                          </div>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </Card>
-              )}
-
-              {/* Action buttons */}
-              {selectedCase.id === CASE_ID && (
-                <Card className="p-5">
-                  <h3 className="text-sm font-bold text-navy-900 mb-4">{t('Actions', 'कृती')}</h3>
-                  <div className="flex gap-3">
-                    {alreadyApproved ? (
-                      <div className="flex items-center gap-2 bg-verified-50 border border-verified-200 rounded-xl px-5 py-3 flex-1 justify-center">
-                        <svg className="w-5 h-5 text-verified-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7"/></svg>
-                        <span className="text-verified-700 font-bold">
-                          {isRevenue ? 'Approved & Referred to Higher Education' : 'Scholarship Approved – ₹25,000 to DBT'}
-                        </span>
-                      </div>
-                    ) : (
-                      <>
-                        <Button id="approve-btn" variant="success" size="lg" className="flex-1" onClick={handleApprove} loading={approving}>
-                          ✓ {isRevenue ? t('Approve & Refer', 'मंजूर करा व रेफर') : t('Approve Scholarship', 'शिष्यवृत्ती मंजूर')}
-                        </Button>
-                        <Button variant="ghost" size="lg">
-                          📋 {t('Seek More Info', 'अधिक माहिती')}
-                        </Button>
-                        <Button variant="ghost" size="lg">
-                          ↪ {t('Re-Refer', 'पुनर्निर्देशित')}
-                        </Button>
-                      </>
-                    )}
-                  </div>
-                </Card>
-              )}
-            </motion.div>
-          </AnimatePresence>
-        </div>
-      </div>
-
-      {/* Smart Referral animation overlay */}
-      <AnimatePresence>
-        {showReferralAnim && (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center"
-          >
-            <motion.div
-              initial={{ scale: 0.7, opacity: 0 }}
-              animate={{ scale: 1, opacity: 1 }}
-              exit={{ scale: 0.7, opacity: 0 }}
-              className="bg-white rounded-2xl p-8 shadow-2xl max-w-md text-center"
-            >
-              <motion.div
-                animate={{ rotate: 360 }}
-                transition={{ duration: 2, repeat: Infinity, ease: 'linear' }}
-                className="w-16 h-16 rounded-full bg-saffron-500 flex items-center justify-center mx-auto mb-4"
-              >
-                <svg className="w-8 h-8 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>
-              </motion.div>
-              <h3 className="text-xl font-black text-navy-900 mb-2">
-                {isRevenue ? '⚡ Smart Referral Triggered!' : '🎉 Scholarship Approved!'}
-              </h3>
-              <p className="text-slate-500 text-sm mb-4">
-                {isRevenue
-                  ? "Rohan's verified facts auto-routed to Higher Education Dept. Zero re-uploads needed."
-                  : 'DBT transfer of ₹25,000 initiated to Canara Bank, IFSC: CNRB0001234.'}
-              </p>
-              <div className="flex justify-center gap-3 text-sm text-slate-500">
-                {isRevenue
-                  ? <>Revenue<span className="text-saffron-500 mx-2">→</span>SUTRADHAR<span className="text-saffron-500 mx-2">→</span>Higher Ed</>
-                  : <>Higher Ed<span className="text-verified-500 mx-2">→</span>DBT<span className="text-verified-500 mx-2">→</span>₹25,000</>}
               </div>
-            </motion.div>
-          </motion.div>
+            </Card>
+
+            <div>
+              <h4 className="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-3">Eligibility Checklist</h4>
+              <div className="space-y-2 bg-slate-50 p-3 rounded-xl border border-slate-100">
+                <div className="flex justify-between items-center text-sm">
+                  <span className="flex items-center gap-2"><CheckCircle className="w-4 h-4 text-verified-500" /> Income ≤ ₹2.5L</span>
+                  <Badge variant="verified">Pass</Badge>
+                </div>
+                <div className="flex justify-between items-center text-sm">
+                  <span className="flex items-center gap-2"><CheckCircle className="w-4 h-4 text-verified-500" /> Caste valid</span>
+                  <Badge variant="verified">Pass</Badge>
+                </div>
+                <div className="flex justify-between items-center text-sm">
+                  <span className="flex items-center gap-2"><CheckCircle className="w-4 h-4 text-verified-500" /> Domicile verified</span>
+                  <Badge variant="verified">Pass</Badge>
+                </div>
+              </div>
+            </div>
+
+            <div className="pt-4 border-t border-slate-100 space-y-3">
+              <Button className="w-full" variant="success" onClick={handleApprove}>Approve Application</Button>
+              <div className="flex gap-2">
+                <Button className="flex-1" variant="secondary" onClick={() => dispatch('requestMoreInfo', { caseId: activeCase.id })}>Ask for Info</Button>
+                <Button className="flex-1" variant="danger" onClick={() => setRejectModalOpen(true)}>Reject</Button>
+              </div>
+              <Button className="w-full" variant="ghost" onClick={() => dispatch('smartReferral', { caseId: activeCase.id })}>
+                Refer to Department <ArrowRight className="w-4 h-4 ml-2" />
+              </Button>
+            </div>
+          </div>
         )}
-      </AnimatePresence>
+      </Drawer>
+
+      <Modal open={rejectModalOpen} onClose={() => setRejectModalOpen(false)} title="Reject Application">
+        <div className="space-y-4">
+          <p className="text-sm text-slate-600">Please provide a reason for rejection. This will be visible to the citizen.</p>
+          <textarea 
+            className="w-full border border-slate-300 rounded-lg p-3 text-sm focus:ring-2 focus:ring-danger-500 focus:border-danger-500 outline-none"
+            rows={4}
+            placeholder="E.g., Document unclear, eligibility criteria not met..."
+            value={rejectReason}
+            onChange={(e) => setRejectReason(e.target.value)}
+          />
+          <div className="flex justify-end gap-2">
+            <Button variant="ghost" onClick={() => setRejectModalOpen(false)}>Cancel</Button>
+            <Button variant="danger" onClick={handleReject} disabled={!rejectReason.trim()}>Confirm Rejection</Button>
+          </div>
+        </div>
+      </Modal>
     </div>
   );
 }

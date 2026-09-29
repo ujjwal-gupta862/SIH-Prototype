@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { clsx } from 'clsx';
 import { useApp } from '../../context/AppContext';
@@ -23,6 +23,7 @@ const NAV_LINKS: Array<{ label: string; labelMr: string; path: string; roles: Ro
   { label: 'Apply Once',    labelMr: 'एकदाच अर्ज',    path: '/citizen/apply',    roles: ['citizen'] },
   { label: 'Case Tracker',  labelMr: 'केस ट्रॅकर',   path: '/citizen/tracker',  roles: ['citizen'] },
   { label: 'Fact Exchange', labelMr: 'तथ्य देवाण',   path: '/citizen/facts',    roles: ['citizen'] },
+  { label: 'Consent',       labelMr: 'संमती',        path: '/citizen/consent',  roles: ['citizen'] },
   { label: 'My Queue',      labelMr: 'रांग',          path: '/officer',          roles: ['officer-revenue', 'officer-education'] },
   { label: 'Referral Map',  labelMr: 'रेफरल मॅप',    path: '/officer/referral', roles: ['officer-revenue', 'officer-education'] },
   { label: 'Command Center',labelMr: 'नियंत्रण केंद्र',path: '/admin',           roles: ['admin'] },
@@ -110,17 +111,17 @@ export function Navbar() {
           className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold text-navy-200 hover:text-white hover:bg-white/10 transition-colors"
         >
           <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M3 5h12M9 3v2m1.048 9.5A18.022 18.022 0 016.412 9m6.088 9h7M11 21l5-10 5 10M12.751 5C11.783 10.77 8.07 15.61 3 18.129"/></svg>
-          {lang === 'en' ? 'EN' : 'मर'}
+          {lang === 'en' ? 'EN' : lang === 'hi' ? 'हि' : 'मर'}
         </button>
         {langOpen && (
           <div className="absolute right-0 top-9 bg-white rounded-xl shadow-lg border border-slate-100 overflow-hidden z-50 w-28">
-            {(['en', 'mr'] as Language[]).map(l => (
+            {(['en', 'hi', 'mr'] as Language[]).map(l => (
               <button
                 key={l}
                 onClick={() => { dispatch({ type: 'SET_LANGUAGE', language: l }); setLangOpen(false); }}
                 className={clsx('w-full px-4 py-2.5 text-left text-sm hover:bg-slate-50 transition-colors', lang === l ? 'text-navy-700 font-bold' : 'text-slate-600')}
               >
-                {l === 'en' ? '🇬🇧 English' : '🇮🇳 मराठी'}
+                {l === 'en' ? '🇬🇧 English' : l === 'hi' ? '🇮🇳 हिन्दी' : '🇮🇳 मराठी'}
               </button>
             ))}
           </div>

@@ -1,5 +1,5 @@
 export type Role = 'citizen' | 'officer-revenue' | 'officer-education' | 'admin';
-export type Language = 'en' | 'mr';
+export type Language = 'en' | 'hi' | 'mr';
 export type AdapterType = 'REST' | 'SOAP';
 export type NodeHealth = 'healthy' | 'warning' | 'critical';
 export type StageStatus = 'completed' | 'active' | 'pending' | 'exception';
